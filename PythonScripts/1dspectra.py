@@ -9,15 +9,14 @@ from astropy.io import fits
 import sys
 import pdb
 
-#Extracts 1d spectra and writes it to a new file
-def extraction(specindex, scidata, nameofile, header, filenumber):
+#Extracts 1d spectra from block spectra and writes it to a new file
+def extraction(specindex, scidata, nameofile, header, filenumber, quad):
     #Extract spectrum
     spectrum = scidata[:, specindex, :]
 
     #New file name for the 1D spectrum
-    #pdb.set_trace()
     newname = filename[19:]
-    newname = str(filenumber) + '_' + newname
+    newname = 'Q' + str(quad) + '_' + str(filenumber) + '_' + newname
 
     #Save file
     hdu = fits.PrimaryHDU(spectrum, header=header)
@@ -37,18 +36,20 @@ for filename in open(fluxlist):
     hdulist = fits.open(filename)
     scidata1 = np.array([hdulist[1].data])
     header1 = hdulist[1].header
+    quadrant1 = header1['hierarch_eso_ocs_con_quad']
     scidata2 = np.array([hdulist[2].data])
     header2 = hdulist[2].header
+    quadrant2 = header2['hierarch_eso_ocs_con_quad']
 
     #First extension
     for specnum in range(0, scidata1.shape[1]):
         ctr = ctr+1
-        extraction(specnum, scidata1, filename, header1, ctr)
+        extraction(specnum, scidata1, filename, header1, ctr, quadrant1)
 
     #Second extension
     for specnum in range(0, scidata2.shape[1]):
         ctr = ctr + 1
-        extraction(specnum, scidata2, filename, header2, ctr)
+        extraction(specnum, scidata2, filename, header2, ctr, quadrant2)
 
 #Error files
 for filename in open(errorlist):
@@ -59,15 +60,17 @@ for filename in open(errorlist):
     hdulist = fits.open(filename)
     scidata1 = np.array([hdulist[1].data])
     header1 = hdulist[1].header
+    quadrant1 = header1['hierarch_eso_ocs_con_quad']
     scidata2 = np.array([hdulist[2].data])
     header2 = hdulist[2].header
+    quadrant2 = header2['hierarch_eso_ocs_con_quad']
 
     #First extension
     for specnum in range(0, scidata1.shape[1]):
         ctr = ctr + 1
-        extraction(specnum, scidata1, filename, header1, ctr)
+        extraction(specnum, scidata1, filename, header1, ctr, quadrant1)
 
     #Second extension
     for specnum in range(0, scidata2.shape[1]):
         ctr = ctr + 1
-        extraction(specnum, scidata2, filename, header2, ctr)
+        extraction(specnum, scidata2, filename, header2, ctr, quadrant2)

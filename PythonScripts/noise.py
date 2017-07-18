@@ -7,48 +7,61 @@ import numpy as np
 from astropy.io import fits
 import sys
 import pdb
+from specfunctions import cutPillars
 
 #To do:
 #1.) Check Poisson vs Gaussian variance
-#2.) Check extension on the FITS file
-#3.) Check that data is read in as 2D array
-#_______________________________________________________________________________
-# Calculates Poisson variance
 
-
-# The follwoing function takes the spectral data as input and outputs the
-# data with the "pillarboxing" on the sides cut off as well as the indices where
-# it was cut off. These "pillarboxing" pixels all have a value of -1.
-# **Note: the end_index is the index for the first pixel on the right pillar.
-def cutPillars(olddata):
-    #Remove left pillar
-    leftcut = np.where(olddata>-1)[2]  #the data has 3 dimensions
-
-    #Remove right pillar
-    reversedata = np.flip(olddata, 2)[0][0][:]
-    rightcut = np.where(reversedata>-1)[0]   #this is still the flipped array
-
-    #Get endpoints of the data
-    beginning_index = leftcut[0]
-    end_index = rightcut[0]     #although not 0th indexed when coming from end,
-                                #scope operator excludes endpoint anyways
-
-    #Extract spectrum
-    newdata = olddata[0][0][:]
-    newdata = newdata[beginning_index: -end_index]
-
-    return newdata, beginning_index, end_index
-#_______________________________________________________________________________
 #Input
 filelist = sys.argv[1]
+
+#Constants
+FLAG_LIMIT = -0.02       # limit below which everything is considered space
+FLAG_VALUE = -15         # value to set the empty space to
 
 with open(filelist) as listobject:
     for filename in listobject:
         #Open things
         filename = filename.rstrip(' \n')
         hdulist = fits.open(filename)
-        scidata = np.array([hdulist[0].data])
 
-        #Remove pillarboxing one row at a time
-        for rownumber in range(np.size(scidata,0)):
-            cutPillars(scidata[rownumber, 0]
+        for extension in range(1,3):
+            #Get things from block FITS file
+            scidata = np.array([hdulist[extension].data])
+            header = hdulist[extension].header
+            quadrant = header['hierarch_eso_ocs_con_quad']
+
+            #Initializations
+            top = 0
+            cleandata = []
+            move_top = False
+            ctr = 0
+
+            for row in range(scidata.shape[0]):
+                ctr = ctr + 1
+                move_top = False
+
+                #Cut Pillars
+                cleanrow = cutPillars(scidata[row, :])
+                if cleandata == []:
+                    cleandata = cleanrow
+                else:
+                    cleandata = np.stack((cleandata, cleanrow))
+
+                #Flag the space between the spectra
+                if (cleanrow <= FLAG_LIMIT).any():
+                    cleanrow.fill(FLAG_VALUE)
+                    move_top = True
+
+                #Extract spectrum and Calculate Error
+                if (cleanrow == FLAG_VALUE).all() and not (cleandata[row-1, :] == FLAG_VALUE).all():
+                    if top == 0:
+                        spectrum = cleandata[top:row, :]
+                    else:
+                        spectrum = cleandata[top+1:row, :]
+                    writeToFits(filename, spectrum, header, ctr, quadrant)
+
+                if move_top:
+                    top = row
+
+        hdulist.close()

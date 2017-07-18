@@ -7,7 +7,6 @@ from matplotlib.ticker import AutoMinorLocator
 from astropy.io import fits
 import csv
 import pdb
-import math
 import sys
 
 # ________________________________________________________________________________
@@ -32,6 +31,7 @@ def mapWavelength(header, length, top, bottom):
 # data with the "pillarboxing" on the sides cut off as well as the indices where
 # it was cut off. These "pillarboxing" pixels all have a value of -1.
 # **Note: the end_index is the index for the first pixel on the right pillar.
+#         this function is specific to the 1D spectra because they have 3 dim
 def cutPillars(olddata):
     #Remove left pillar
     leftcut = np.where(olddata>-1)[2]  #the data has 3 dimensions
@@ -56,9 +56,8 @@ def cutPillars(olddata):
 # beginning of the appropriate wavelength bin.
 # **Note: 3rd argument is boolean telling the function if the data is error data.
 #         If so, we bin the data via addition in quadrature.
-def binSpectrum(xfull, yfull, isError):
+def binSpectrum(xfull, yfull, isError, dx = 2):
     #Constants
-    dx = 3                      #bin width in angstroms
     full_length = xfull.size    #length of the arrays containing unbinned data
     bin_index = 0           #index for binned arrays (as opposed to full_index)
 
@@ -67,8 +66,8 @@ def binSpectrum(xfull, yfull, isError):
         xbin = np.zeros(int(full_length/dx))
         ybin = np.zeros(int(full_length/dx))
     else:
-        xbin = np.zeros(math.floor(full_length/dx) + 1)
-        ybin = np.zeros(math.floor(full_length/dx) + 1)
+        xbin = np.zeros(full_length//dx + 1)
+        ybin = np.zeros(full_length//dx + 1)
 
     #Bin the data
     for full_index in range(0, full_length, dx):
@@ -79,9 +78,9 @@ def binSpectrum(xfull, yfull, isError):
             bucket = yfull[full_index : full_index+dx]
 
         #Add up the spectrum values in bucket
-        if isError:            #if error spectrum
+        if isError:                                          #if error spectrum
             ybin[bin_index] = np.sqrt(np.sum(bucket**2))
-        else:                  #if science spectrum
+        else:                                               #if science spectrum
             ybin[bin_index] = np.sum(bucket)
 
         #Set binned x-axis values
@@ -110,6 +109,7 @@ with open(filelist) as fileobject:
 
         #Extract Spectrum
         yflux, fluxtop, fluxbottom = cutPillars(fluxdata)
+        pdb.set_trace()
         yerror, errtop, errbottom = cutPillars(errordata)
 
         #Map Wavelengths
@@ -127,8 +127,8 @@ with open(filelist) as fileobject:
         assert (yerror.size == xflux.size), ('The error y and x axes have differenct sizen\n'
                                              'The file was ' + plotfilename)
         #Bin the science and error spectra
-        xflux_binned, yflux_binned = binSpectrum(xflux, yflux, False)
-        xerror_binned, yerror_binned = binSpectrum(xflux, yerror, True)
+        xflux_binned, yflux_binned = binSpectrum(xflux, yflux, False, 3)
+        xerror_binned, yerror_binned = binSpectrum(xflux, yerror, True, 3)
         #Check to make sure that the x axis for the science and error are still the same after binning
         assert (np.array_equal(xflux_binned,xerror_binned)), ('The science and error spectra have different '
                                                               'x values after binning\nThe file was '
