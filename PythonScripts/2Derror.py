@@ -36,7 +36,7 @@ with open(tablelist) as tableobject, open(blocklist) as blockobject:
             #Get data from blockfile and table
             image = blockhdu[extension].data
             header = hdulist[extension].header
-            quadrant = header['hierarch_eso_ocs_con_quad']
+            quadrant = header['HIERARCH ESO OCS CON QUAD']
             tabdata = tablehdu[extension].data
             col_position = np.flip(tabdata['position'], 0)
             col_length = np.flip(tabdata['length'], 0)
