@@ -1,8 +1,10 @@
-# Input:       list of files with multiple 1D spectra in each file
+# Input:       1.) text file list of the names of the block flux spectra
+#              2.) text file list of the names of the sci tables
 # Description: creates fits file for 1D spctra from file with a bunch of them
-#              on each line. Each block of 1d spectra is in a fits fil with 3
+#              on each line. Each block of 1d spectra is in a fits file with 3
 #              extensions. The first just has a header. The other two have the
-#              data, with the 2nd simply being an extension of the first.
+#              data, with the 2nd simply being a continuation of the first. Also
+#              adds a card with the slit number in the header of each 1D file.
 
 import numpy as np
 from astropy.io import fits
@@ -10,12 +12,12 @@ import sys
 import pdb
 
 #Extracts 1d spectra from block spectra and writes it to a new file
-def extraction(specindex, scidata, nameofile, header, filenumber, quad):
+def extraction(scidata, nameofile, header, filenumber, quad):
     #Extract spectrum
     spectrum = scidata[:, specindex, :]
 
     #New file name for the 1D spectrum
-    newname = filename[19:]
+    newname = nameofile[19:]
     newname = 'Q' + str(quad) + '_' + str(filenumber) + '_' + newname
 
     #Save file
@@ -25,52 +27,93 @@ def extraction(specindex, scidata, nameofile, header, filenumber, quad):
 #_______________________________________________________________________________
 #Input
 fluxlist = sys.argv[1]
-errorlist = sys.argv[2]
+tablelist = sys.argv[2]
 
-#Flux files
-for filename in open(fluxlist):
-    ctr = 0
+with open(fluxlist) as fluxobject, open(tablelist) as tableobject:
+    for fluxname, tablename in zip(fluxobject, tableobject):
+        specnum = 0
 
-    #Open things
-    filename = filename.rstrip(' \n')
-    hdulist = fits.open(filename)
-    scidata1 = np.array([hdulist[1].data])
-    header1 = hdulist[1].header
-    quadrant1 = header1['hierarch_eso_ocs_con_quad']
-    scidata2 = np.array([hdulist[2].data])
-    header2 = hdulist[2].header
-    quadrant2 = header2['hierarch_eso_ocs_con_quad']
+        #Open flux and table files
+        fluxname = fluxname.rstrip(' \n')
+        fluxhdu = fits.open(fluxname)
+        tablename = tablename.rstrip(' \n')
+        tablehdu = fits.open(tablename)
 
-    #First extension
-    for specnum in range(0, scidata1.shape[1]):
-        ctr = ctr+1
-        extraction(specnum, scidata1, filename, header1, ctr, quadrant1)
+        for extension in range(1,3):
+            #Get header and image info
+            scidata = np.array([hdulist[extension].data])
+            header = hdulist[extension].header
+            quadrant = header['hierarch_eso_ocs_con_quad']
 
-    #Second extension
-    for specnum in range(0, scidata2.shape[1]):
-        ctr = ctr + 1
-        extraction(specnum, scidata2, filename, header2, ctr, quadrant2)
+            #Get table info
+            table = tablehdu[extension].data
+            rows = np.stack((table['row_1'], table['row_2'], table['row_3']), axis=1)
+            rows = np.flip(rows, axis=0)
+            col_slitID = np.flip(table['slit_id'], axis=0)
 
-#Error files
-for filename in open(errorlist):
-    ctr = 0
+            #Go through spectra in this extension
+            for specindex in range(0, scidata.shape[1]):
+                specnum = specnum+1
 
-    #Open things
-    filename = filename.rstrip(' \n')
-    hdulist = fits.open(filename)
-    scidata1 = np.array([hdulist[1].data])
-    header1 = hdulist[1].header
-    quadrant1 = header1['hierarch_eso_ocs_con_quad']
-    scidata2 = np.array([hdulist[2].data])
-    header2 = hdulist[2].header
-    quadrant2 = header2['hierarch_eso_ocs_con_quad']
+                #Get slit ID and Add to the header
+                slitindex = np.where(rows == specindex)[0]
+                slit_id = col_slitID[slitindex][0]
+                header.set('slit_id', slit_id)
 
-    #First extension
-    for specnum in range(0, scidata1.shape[1]):
-        ctr = ctr + 1
-        extraction(specnum, scidata1, filename, header1, ctr, quadrant1)
+                #Extract and Write spectrum to file
+                extraction(scidata, fluxname, header, specnum, quadrant)
 
-    #Second extension
-    for specnum in range(0, scidata2.shape[1]):
-        ctr = ctr + 1
-        extraction(specnum, scidata2, filename, header2, ctr, quadrant2)
+        #Close files
+        fluxhdu.close()
+        tablehdu.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            # #Second extension
+            # for specnum in range(0, scidata2.shape[1]):
+            #     ctr = ctr + 1
+            #     extraction(specnum, scidata2, filename, header2, ctr, quadrant2)
+
+# #Error files
+# for filename in open(errorlist):
+#     ctr = 0
+#
+#     #Open things
+#     filename = filename.rstrip(' \n')
+#     hdulist = fits.open(filename)
+#     scidata1 = np.array([hdulist[1].data])
+#     header1 = hdulist[1].header
+#     quadrant1 = header1['hierarch_eso_ocs_con_quad']
+#     scidata2 = np.array([hdulist[2].data])
+#     header2 = hdulist[2].header
+#     quadrant2 = header2['hierarch_eso_ocs_con_quad']
+#
+#     #First extension
+#     for specnum in range(0, scidata1.shape[1]):
+#         ctr = ctr + 1
+#         extraction(specnum, scidata1, filename, header1, ctr, quadrant1)
+#
+#     #Second extension
+#     for specnum in range(0, scidata2.shape[1]):
+#         ctr = ctr + 1
+#         extraction(specnum, scidata2, filename, header2, ctr, quadrant2)

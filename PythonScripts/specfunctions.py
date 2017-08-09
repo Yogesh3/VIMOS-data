@@ -5,22 +5,34 @@ import numpy as np
 from astropy.io import fits
 
 #________________________________________________________________________________
-def errorSpec(bigspec):
-    '''Calculates 1D error spectrum from 2D spectrum as Poisson noise'''
-    return np.sqrt(np.mean(bigspec, axis=0))
+def errorSpectrum(bigspec):
+    '''Calculates 1D error spectrum from 2D spectrum as standard deviation'''
+    return np.std(bigspec, axis=0, ddof=1)
 # _______________________________________________________________________________
-def writeToFits(oldname, data, header, filenumber, quad):
+def writeToFits(oldname, data, header, filenumber, quad, spectype, deleted_rows=None):
     '''Takes an array and writes it to a fits file
     Inputs
         oldname = full name of the file containing multiple spectra
         data = the spectrum
         header = header of the extension from which data comes; also new header
         filenumber = number of the spectrum
-        quad = quadrant number'''
+        quad = quadrant number
+        spectype = type of spectrum'''
 
     #New file name
     newname = oldname[19:]
     newname = 'Q' + str(quad) + '_' + str(filenumber) + '_' + newname
+
+    #Type specific changes
+    if spectype.lower() == '2d':
+        #Name
+        newname = '2D_' + newname
+    elif spectype.lower() == 'error':
+        #Name
+        newname = newname[:-27]
+        newname = newname + 'ERROR.fits'
+        #Header
+        header.set('badrows', str(deleted_rows))
 
     #Write to file
     hdu = fits.PrimaryHDU(data, header=header)

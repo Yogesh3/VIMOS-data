@@ -147,7 +147,7 @@ with open(filelist) as fileobject:
         ax.xaxis.set_minor_locator(minorLocator)
         plt.xlabel('Wavelength (angstroms)')             #labels
         plt.ylabel('Flux [' + fluxheader['BUNIT'] + ']')
-        plt.title(plotfilename[0:-1])
+        plt.title(plotfilename[0:-1])                       #title
         plt.savefig(plotfilename+'pdf', bbox_inches = 'tight')
 
         #Close files
