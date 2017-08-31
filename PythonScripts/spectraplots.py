@@ -109,7 +109,6 @@ with open(filelist) as fileobject:
 
         #Extract Spectrum
         yflux, fluxtop, fluxbottom = cutPillars(fluxdata)
-        pdb.set_trace()
         yerror, errtop, errbottom = cutPillars(errordata)
 
         #Map Wavelengths
@@ -134,23 +133,79 @@ with open(filelist) as fileobject:
                                                               'x values after binning\nThe file was '
                                                                + plotfilename)
 
-        #Plot spectrum
-        plt.figure(figsize = (30,6), dpi=120)
+
+        #Open up the table and 2D spectrum
+        tablename = fluxheader['hierarch object sci table']
+        tablehdu = fits.open(tablename)
+        tabdata = tablehdu[fluxheader['sci extension']].data
+        twoDfilename = errorheader['hierarch 2D file name']
+        twoDhdu = fits.open(twoDfilename)
+        twoDheader = twoDhdu[0].header
+        twoDdata = twoDhdu[0].data
+
+        #Get columns from table
+        cols = tabdata.columns.names
+        if 'row_3' in cols:        #at most, 3 objects per slit
+            rows = np.stack((table['row_1'], table['row_2'], table['row_3']), axis=1)
+        elif 'row_2' in cols and not 'row_4' in cols:        #the second extension often doesn't have 3 objects in any slit
+            rows = np.stack((table['row_1'], table['row_2']), axis=1)
+        else:
+            print('There\'s either only one object in the slit or more than 3')
+            pdb.set_trace()
+        rows = np.flip(rows, axis=0)
+        col_slitID = np.flip(table['slit_id'], axis=0)
+
+        #Get stuff from spectra headers
+        slit_index = errorheader['hierarch slit index']
+        flux_index = fluxheader['hierarch image row index']
+        spec_top = twoDheader['hierarch 2Dspectrum top']
+        slitID = twoDheader['hierarch slit id']
+
+        #Get boundaries on the 1D flux spectrum in the 2D slit image
+        obj_num = np.where(rows[slit_index, :] == flux_index)[0][0] + 1
+        col_start = np.flip(table['start_' + str(obj_num)], axis=0)
+        col_end = np.flip(table['end_' + str(obj_num)], axis=0)
+        lowerbound = col_start[slit_index] - spec_top
+        upperbound = col_end[slit_index] - spec_top
+
+        #Begin Plots
+        fig = plt.figure(figsize = (30,12), dpi=120)
+
+        #Plot 1d spectrum
+        axtop = fig.addsubplot(2,1,1)
         plt.plot(xflux_binned, yflux_binned, 'b')              #plotting
         plt.plot(xerror_binned, yerror_binned, 'r')
         plt.grid(True, which='both')                   #grid
         plt.grid(which='minor', linewidth=0.5)
         plt.grid(which='major', linewidth=1)
         plt.minorticks_on()                             #tick marks
-        ax = plt.gca()
         minorLocator = AutoMinorLocator(8)
-        ax.xaxis.set_minor_locator(minorLocator)
+        axtop.xaxis.set_minor_locator(minorLocator)
         plt.xlabel('Wavelength (angstroms)')             #labels
         plt.ylabel('Flux [' + fluxheader['BUNIT'] + ']')
         plt.title(plotfilename[0:-1])                       #title
+
+        #Plot 2D spectrum
+        axbottom = fig.addsubplot(2,1,1)
+        mu = np.mean(twoDdata)
+        sigma = np.std(twoDdata, ddof=1)
+        plt.imshow(twoDdata, clim=(mu-sigma, mu+sigma), cmap='gray')
+
+        #Plot marker lines
+        axbottom.axhline(y= lowerbound, linestyle='--', color='green', dashes= (5,25))
+        axbottom.axhline(y= upperbound, linestyle='--', color='green', dashes= (5,25))
+
+        #Add text box
+        text = 'slit ID = ' + str(slitID)
+        axtop.text(-0.05, 0.05, text, transform = ax.transAxes, ha = 'top', va='top',
+                      bbox = dict(facecolor='white', edgecolor = 'black', pad = 10.0) )
+
         plt.savefig(plotfilename+'pdf', bbox_inches = 'tight')
+        pdb.set_trace()
 
         #Close files
         plt.close()
         fluxhdulist.close()
+        tablehdu.close()
         errorhdulist.close()
+        twoDhdu.close()

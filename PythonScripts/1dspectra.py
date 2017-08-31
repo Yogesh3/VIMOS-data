@@ -41,13 +41,17 @@ with open(fluxlist) as fluxobject, open(tablelist) as tableobject:
 
         for extension in range(1,3):
             #Get header and image info
-            scidata = np.array([hdulist[extension].data])
-            header = hdulist[extension].header
-            quadrant = header['hierarch_eso_ocs_con_quad']
+            scidata = np.array([fluxhdu[extension].data])
+            header = fluxhdu[extension].header
+            quadrant = header['HIERARCH ESO OCS CON QUAD']
 
             #Get table info
             table = tablehdu[extension].data
-            rows = np.stack((table['row_1'], table['row_2'], table['row_3']), axis=1)
+            cols = table.columns.names     #names of all fields in table
+            if 'row_3' in cols:
+                rows = np.stack((table['row_1'], table['row_2'], table['row_3']), axis=1)
+            else:                  #the second extension often doesn't have 3 objects in any slit
+                rows = np.stack((table['row_1'], table['row_2']), axis=1)
             rows = np.flip(rows, axis=0)
             col_slitID = np.flip(table['slit_id'], axis=0)
 
@@ -57,8 +61,16 @@ with open(fluxlist) as fluxobject, open(tablelist) as tableobject:
 
                 #Get slit ID and Add to the header
                 slitindex = np.where(rows == specindex)[0]
-                slit_id = col_slitID[slitindex][0]
-                header.set('slit_id', slit_id)
+                try:
+                    slit_id = col_slitID[slitindex[0]]
+                except IndexError:
+                    pdb.set_trace()
+                header.set('slit id', slit_id)
+
+                #Add science table name and extension to header
+                header.set('object sci table', tablename)
+                header.set('sci extension', extension)
+                header.set('image row index', specindex)
 
                 #Extract and Write spectrum to file
                 extraction(scidata, fluxname, header, specnum, quadrant)

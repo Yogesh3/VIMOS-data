@@ -9,8 +9,8 @@ def errorSpectrum(bigspec):
     '''Calculates 1D error spectrum from 2D spectrum as standard deviation'''
     return np.std(bigspec, axis=0, ddof=1)
 # _______________________________________________________________________________
-def writeToFits(oldname, data, header, filenumber, quad, spectype, deleted_rows=None):
-    '''Takes an array and writes it to a fits file
+def writeToFits(oldname, data, header, filenumber, quad, spectype):
+    '''Takes an array and writes it to a fits file. Retruns name of the file
     Inputs
         oldname = full name of the file containing multiple spectra
         data = the spectrum
@@ -31,12 +31,12 @@ def writeToFits(oldname, data, header, filenumber, quad, spectype, deleted_rows=
         #Name
         newname = newname[:-27]
         newname = newname + 'ERROR.fits'
-        #Header
-        header.set('badrows', str(deleted_rows))
 
     #Write to file
     hdu = fits.PrimaryHDU(data, header=header)
     hdu.writeto(newname, overwrite=True)
+
+    return newname
 #________________________________________________________________________________
 def mapWavelength(header, length, top, bottom):
     '''The following function takes as input the header and length of a spectrum fits
@@ -85,7 +85,7 @@ def cutPillars(olddata):
     return newdata, beginning_index, end_index
 #_______________________________________________________________________________
 def binSpectrum(xfull, yfull, isError, dx=2):
-    '''The following functions bins spectra into bins of size dx Angstroms.
+    '''The following functions bins spectra into bins of size dx pixels.
     Requires x-axis data so that the spectrum y-axis values are lined up with the
     beginning of the appropriate wavelength bin.
     **Note: 3rd argument is boolean telling the function if the data is error data.

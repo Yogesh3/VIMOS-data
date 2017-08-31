@@ -13,8 +13,8 @@ import pdb
 from specfunctions import *
 
 #Input
-tablelist = sys.argv[1]
-blocklist = sys.argv[2]
+blocklist = sys.argv[1]
+tablelist = sys.argv[2]
 
 #Constants
 LOWER_FLAG = -0.02       # limit below which everything is considered space
@@ -35,36 +35,54 @@ with open(tablelist) as tableobject, open(blocklist) as blockobject:
         for extension in range(1,3):
             #Get data from blockfile and table
             image = blockhdu[extension].data
-            header = hdulist[extension].header
+            header = blockhdu[extension].header
+            pdb.set_trace()
             quadrant = header['HIERARCH ESO OCS CON QUAD']
             tabdata = tablehdu[extension].data
             col_position = np.flip(tabdata['position'], 0)
             col_length = np.flip(tabdata['length'], 0)
-            col_slitID = np.flip(table['slit_id'], 0)
+            col_slitID = np.flip(tabdata['slit_id'], 0)
 
             #Go through 2D spectra
-            for slitindex in range(table.size):
+            for slitindex in range(tabdata.size):
                 #Extract spectrum
                 top = col_position[slitindex]
                 bottom = col_position[slitindex] + col_length[slitindex]
                 spectrum = image[top:bottom]
-                spectrum, dummy1, dummy2 = cutPillars(spectrum)
+
+                #Cut pillarboxing on spectrum
+                dummy, leftend, rightend = cutPillars(spectrum[0,:])
+                cleanspec = np.ones((spectrum.shape[0], dummy.size))
+                for i in range(spectrum.shape[0]):
+                    cleanspec[i,:], dummy1, dummy2 = cutPillars(spectrum[i,:])
+
+                #Remove bad rows
+                badrows = np.where(cleanspec < LOWER_FLAG)[0]
+                badrows = np.unique(badrows)
+                cleanerspec = np.delete(cleanspec, badrows, 0)
 
                 specnum = specnum+1
 
-                #Write 2D spectrum to filename
+                #Add to 2D slit header
                 newheader = blockhdu[extension].header
-                newheader.set('slit_id', col_slitID[slitindex])
+                newheader.set('object sci table', tablename)
+                newheader.set('sci extension', extension)
+                newheader.set('slit id', col_slitID[slitindex])
+                newheader.set('slit index', slitindex)
+                newheader.set('2Dspectrum top', top)
+                newheader.set('2Dspectrum bottom', bottom)
+                header.set('badrows', badrows)
                 quadrant = newheader['hierarch eso ocs con quad']
-                writeToFits(blockname, spectrum, newheader, specnum, quadrant, '2d')
 
-                #Remove bad rows
-                badrows = np.where(spectrum < LOWER_FLAG)[0]
-                cleanspec = np.delete(spectrum, badrows, 0)
+                #Write 2D spectrum to filename
+                twoDname = writeToFits(blockname, cleanerspec, newheader, specnum, quadrant, '2d')
 
                 #Calculate error and Write to file
-                errorspec = errorSpectrum(cleanspec)
-                writeToFits(blockname, cleanspec, newheader, specnum, quadrant, 'error', badrows)
+                errorspec = errorSpectrum(cleanerspec)
+                newheader.set('2D file name', twoDname)
+                errorname = writeToFits(blockname, cleanerspec, newheader, specnum, quadrant, 'error')
+
+                pdb.set_trace()
 
         #Close Files
         blockhdu.close()
