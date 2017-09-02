@@ -43,18 +43,22 @@ def mapWavelength(header, length, top, bottom):
     file as well as the points where the spectrum was cut to ignore the pillarboxing
     It maps the dispersion axis from pixels to wavelength.
 
+    Note: the last pixel is not mapped, but it gets cut anyways, so it doesn't matter.
+
     Data Dictionary:
         beginning  = beginning of pillarboxing
         end        = end of pillarboxing
+        stepsize   = number of Angstroms per pixel
         top/bottom = indices of the ends of the spectrum, without pillarboxing '''
 
     #Map whole strip, including pillarboxing
     beginning = header['CRVAL1']
-    end = length + beginning
-    strip = np.arange(beginning, end)
+    stepsize = header['CD1_1']
+    end = length*stepsize + beginning
+    mappedvalues = np.arange(beginning, end, stepsize)
 
     #Cut the strip to line up with just the spectrum
-    return strip[top: -bottom]
+    return mappedvalues[top: -bottom]
 #_______________________________________________________________________________
 def cutPillars(olddata):
     '''The following function takes the spectral data as input and outputs the
