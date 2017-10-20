@@ -15,7 +15,7 @@ from specfunctions import *
 #Input
 blocklist = sys.argv[1]
 tablelist = sys.argv[2]
-binsize = sys.argv[3]
+#binsize = sys.argv[3]        # to be used when fixing code to bin, then calculate error
 
 #Constants
 LOWER_FLAG = -0.02       # limit below which everything is considered space
