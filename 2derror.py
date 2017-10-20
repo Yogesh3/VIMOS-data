@@ -15,6 +15,7 @@ from specfunctions import *
 #Input
 blocklist = sys.argv[1]
 tablelist = sys.argv[2]
+binsize = sys.argv[3]
 
 #Constants
 LOWER_FLAG = -0.02       # limit below which everything is considered space
@@ -36,7 +37,6 @@ with open(tablelist) as tableobject, open(blocklist) as blockobject:
             #Get data from blockfile and table
             image = blockhdu[extension].data
             header = blockhdu[extension].header
-            pdb.set_trace()
             quadrant = header['HIERARCH ESO OCS CON QUAD']
             tabdata = tablehdu[extension].data
             col_position = np.flip(tabdata['position'], 0)
@@ -60,6 +60,10 @@ with open(tablelist) as tableobject, open(blocklist) as blockobject:
                 badrows = np.where(cleanspec < LOWER_FLAG)[0]
                 badrows = np.unique(badrows)
                 cleanerspec = np.delete(cleanspec, badrows, 0)
+                badrows = badrows + top
+                badrows_str = ''
+                for row in badrows:
+                    badrows_str = badrows_str + ' ' + str(row) + ' '
 
                 specnum = specnum+1
 
@@ -71,7 +75,7 @@ with open(tablelist) as tableobject, open(blocklist) as blockobject:
                 newheader.set('slit index', slitindex)
                 newheader.set('2Dspectrum top', top)
                 newheader.set('2Dspectrum bottom', bottom)
-                header.set('badrows', badrows)
+                header.set('badrows', badrows_str)
                 quadrant = newheader['hierarch eso ocs con quad']
 
                 #Write 2D spectrum to filename
@@ -79,10 +83,15 @@ with open(tablelist) as tableobject, open(blocklist) as blockobject:
 
                 #Calculate error and Write to file
                 errorspec = errorSpectrum(cleanerspec)
-                newheader.set('2D file name', twoDname)
-                errorname = writeToFits(blockname, cleanerspec, newheader, specnum, quadrant, 'error')
 
-                pdb.set_trace()
+                #Add the pillarboxing back
+                leftpad = np.ones(leftend,) * -1
+                rightpad = np.ones(rightend,) *-1
+                errorspec_padded = np.concatenate([leftpad, errorspec, rightpad])
+
+                #Write to file
+                newheader.set('2D file name', twoDname)
+                errorname = writeToFits(blockname, errorspec_padded, newheader, specnum, quadrant, 'error')
 
         #Close Files
         blockhdu.close()
