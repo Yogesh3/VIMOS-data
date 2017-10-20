@@ -108,7 +108,7 @@ with open(filelist) as fileobject:
         assert (yerror.size == xflux.size), ('The error y and x axes have differenct sizen\n'
                                              'The file was ' + plotfilename)
         #Bin the science and error spectra
-        binsize =
+        binsize = 
         xflux_binned, yflux_binned = binSpectrum(xflux, yflux, False, binsize)
         xerror_binned, yerror_binned = binSpectrum(xflux, yerror, True, binsize)
         #Check to make sure that the x axis for the science and error are still the same after binning
@@ -157,8 +157,8 @@ with open(filelist) as fileobject:
 
         #Plot 1d spectra
         axtop = plt.subplot(gs[0])
-        plt.plot(xflux_binned, yflux_binned, 'b', label='Spectrum')              #plotting
-        plt.plot(xerror_binned, yerror_binned, 'r', label='Error')            #axis limits
+        plt.plot(xflux_binned, yflux_binned, 'b')              #plotting
+        plt.plot(xerror_binned, yerror_binned, 'r')            #axis limits
         plt.xlim(xflux_binned[0], xflux_binned[-1])
         plt.grid(True, which='both')                           #grid
         plt.grid(which='minor', linewidth=0.5)
@@ -169,7 +169,6 @@ with open(filelist) as fileobject:
         plt.xlabel('Wavelength (angstroms)', size=15)                   #labels
         plt.ylabel('Flux [' + fluxheader['BUNIT'] + ']', size=15)
         plt.title(plotfilename[0:-1], size=20)                          #title
-        plt.legend()                                                    #legend
 
         #Add text box
         text = ('slit ID = ' + str(slitID) + '\n' +
@@ -185,7 +184,6 @@ with open(filelist) as fileobject:
         plt.imshow(twoDdata, clim=(mu-2*sigma, mu+2*sigma), cmap='gray', aspect='auto')
 
         #Plot marker lines
-        # these denote where Reflex thinks the spectra are
         axbottom.axhline(y= lowerbound, linestyle='--', color='lawngreen', dashes= (5,25))
         axbottom.axhline(y= upperbound, linestyle='--', color='lawngreen', dashes= (5,25))
 

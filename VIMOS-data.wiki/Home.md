@@ -40,4 +40,4 @@ The following scrips are to be run in the following order.
 *Script name*: `plots.py`  
 *Input files*: see `1dlist.txt`  
 *Output files (sample)*: `Q1_25_M1_OB4_MOS_SCIENCE_FLUX_REDUCED.pdf`  
-*Description*: Cuts pillarboxing from the input files, bins them (see *Issues_to_Address* tab in the wiki), and creates pdf plots (see dfpdf)dfpdf
+*Description*: Cuts pillarboxing from the input files, bins them (see *Issues_to_Address* tab in the wiki), and creates PDF plots (see *spectra* folder in repo) of the 1D spectra with error and the 2D spectra.
